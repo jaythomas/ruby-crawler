@@ -1,0 +1,5 @@
+# Ignore editor files
+.*.swp
+
+# Ignore the default output file
+output.json
