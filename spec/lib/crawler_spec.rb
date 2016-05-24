@@ -20,7 +20,7 @@ describe Crawler do
         <div id="links1">
           <ul>
             <li><a href="//example.com"> Home</a></li>
-            <li><a href="NOT A LINK"> Zipper</a></li>
+            <li><a href="NOT A LINK"> Invalid Link</a></li>
           </ul>
         </div>
         <div id="links2">
@@ -32,9 +32,13 @@ describe Crawler do
       </html>
     HTMLBODY
 
-    stub_request(:get, @url).
-      with(:headers => {'Accept'=>'*/*', 'Accept-Encoding'=>'gzip;q=1.0,deflate;q=0.6,identity;q=0.3', 'User-Agent'=>'Anemone/0.7.2'}).
-      to_return(:status => 200, :body => html_body, :headers => {})
+    stub_request(:get, @url)
+      .with(:headers => {
+        'Accept' =>'*/*',
+        'Accept-Encoding' => 'gzip;q=1.0,deflate;q=0.6,identity;q=0.3',
+        'User-Agent'=>'Ruby'
+      })
+      .to_return(:status => 200, :body => html_body, :headers => {})
 
     @crawler = Crawler.new(@url, @depth)
   end

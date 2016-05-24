@@ -8,8 +8,8 @@ Gem::Specification.new do |spec|
   spec.files         = `git ls-files`.split($/)
   spec.require_paths = ['lib']
 
-  spec.add_runtime_dependency 'anemone', '>= 0.7.2'
   spec.add_runtime_dependency 'commander', '>= 4.4.0'
+  spec.add_runtime_dependency 'nokogiri', '>= 1.6.7'
 
   spec.add_development_dependency 'bundler', '~> 1.3'
   spec.add_development_dependency 'rake', '>= 11.1.2'

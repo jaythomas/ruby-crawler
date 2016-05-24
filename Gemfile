@@ -1,7 +1,7 @@
 # Generated from /home/lite/code/ruby-crawler/crawler.gemspec
 source 'https://rubygems.org'
-gem 'anemone', '>= 0.7.2'
 gem 'commander', '>= 4.4.0'
+gem 'nokogiri', '>= 1.6.7'
 
 group :test do
   gem 'bundler', '~> 1.3'

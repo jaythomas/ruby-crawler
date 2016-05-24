@@ -1,6 +1,7 @@
 require 'uri'
-require 'anemone'
 require 'json'
+require 'nokogiri'
+require 'open-uri'
 
 class Crawler
 
@@ -19,37 +20,10 @@ class Crawler
   end
 
   def generate_map(opts = {})
-
-    Anemone.crawl @url, depth_limit: @depth do |a|
-      a.skip_links_like(/\.#{Assets.join('|')}$/i)
-
-      a.on_every_page do |page|
-        @page_counter += 1
-        # Print some progress dots so the user knows we're doing something
-        if opts[:progress] == true
-          if @page_counter % 20 == 0
-            print '.'
-          end
-        end
-
-        page_title = self.get_page_title page.body
-        page_assets = self.get_page_assets page.body
-
-        # Fill in the site map
-        @site_map[:pages][page.url.to_s] = {}
-        @site_map[:pages][page.url.to_s][:title] = page_title
-        @site_map[:pages][page.url.to_s][:assets] = page_assets if page_assets.size > 0
-      end
-
-      a.after_crawl do |pages|
-        @site_map[:stats][:pages] = pages.uniq!.size
-        if opts[:progress] == true
-          puts "#{pages.uniq!.size} pages processed"
-        end
-      end
-    end
-
-    @site_map
+    @site_map[:pages][@url] = false
+    increment_crawl
+    @site_map[:stats][:pages] = @site_map[:pages].keys.size
+    return @site_map
   end
 
   def write_map(filename)
@@ -63,27 +37,104 @@ class Crawler
     File.open(filename, 'w') { |f| f.write json }
   end
 
-  #private
+  private
 
-  def get_page_assets(body)
-    return [] if body.nil? or body.empty?
-
-    # Grab all urls in the body
-    urls = URI.extract(body, ['http', 'https'])
-    # Filter down to just the ones with file extensions
-    urls.select! do |url|
-      Assets.include? url.split('.').last
+  def request_page(url)
+    begin
+      open(url, read_timeout: 4)
+    rescue
+      return false
     end
-
-    # Don't return duplicates
-    return urls.uniq
   end
 
-  def get_page_title(body)
-    # This will change the encoding and remove weird characters
-    body = body.encode('utf-8', :invalid => :replace, :undef => :replace, :replace => '_')
-    title_tags = body.scan(/<title>([^<>]*)<\/title>/im).flatten
-    title_tags.first || 'Untitled'
+  def clean_link(link)
+    link = link.attribute('href').to_s
+    # Append missing protocols
+    if link =~ /^\/\//
+      return URI(@url).scheme + ':' + link
+    # Append url to relative paths
+    elsif link =~ /^\//
+      return @url + link
+    end
+
+    return link
+  end
+
+  def increment_crawl
+    # Keep track of how many levels deep we are
+    if @depth > 0
+      @depth -= 1
+
+      link_buffer = {}
+
+      @site_map[:pages].each do |key, val|
+        next if val
+        req = request_page(key)
+        unless req
+          link_buffer[key] = 'error'
+          next
+        end
+        body = Nokogiri::HTML req
+        link_buffer[key] = {}
+        link_buffer[key][:title] = body.css('title').text
+        # Initialize collection
+        links = []
+        # Format the retrieved urls
+        body.css('a').each do |link|
+          links.push clean_link(link)
+        end
+        body.css('link').each do |link|
+          links.push clean_link(link)
+        end
+        body.css('img').each do |link|
+          links.push clean_link(link)
+        end
+
+        # Filter out redundant links
+        links.uniq!
+
+        # More filtering...
+        links = links.select do |link|
+          # Filter out invalid links
+          if is_invalid(link)
+            false
+          # Filter out assets
+          elsif is_asset(link)
+            link_buffer[key][:assets] ||= []
+            link_buffer[key][:assets].push(link)
+            false
+          # Filter out external links
+          elsif is_external(link)
+            link_buffer[key][:external_links] ||= []
+            link_buffer[key][:external_links].push(link)
+            false
+          else
+            # Filter out previously crawled
+            @site_map[:pages][link].nil?
+          end
+        end
+        link_buffer[key][:pages] = links.size
+        links.each { |link| link_buffer[link] = false }
+      end
+
+      @site_map[:pages].merge!(link_buffer)
+      increment_crawl
+    end
+  end
+
+  def is_asset(link)
+    Assets.each do |asset|
+      return true if link =~ /\.#{asset}$/i
+    end
+    false
+  end
+
+  def is_external(link)
+    !link.include? @url
+  end
+
+  def is_invalid(link)
+    !(link =~ URI::regexp)
   end
 
 end
