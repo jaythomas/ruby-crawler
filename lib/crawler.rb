@@ -15,14 +15,22 @@ class Crawler
     @depth = depth
     # Just a little counter to keep track of the number of pages hit
     @page_counter = 0
+    @show_progress = false
     @site_map = { stats: {}, pages: {} }
     @url = url
   end
 
   def generate_map(opts = {})
+    # Enable progress output
+    if opts[:progress]
+      @show_progress = true
+    end
     @site_map[:pages][@url] = false
     increment_crawl
     @site_map[:stats][:pages] = @site_map[:pages].keys.size
+    if @show_progress
+      puts "#{@page_counter} pages processed."
+    end
     return @site_map
   end
 
@@ -39,23 +47,18 @@ class Crawler
 
   private
 
-  def request_page(url)
-    begin
-      open(url, read_timeout: 4)
-    rescue
-      return false
-    end
-  end
-
   def clean_link(link)
     link = link.attribute('href').to_s
     # Append missing protocols
     if link =~ /^\/\//
-      return URI(@url).scheme + ':' + link
+      link = URI(@url).scheme + ':' + link
     # Append url to relative paths
     elsif link =~ /^\//
-      return @url + link
+      link = @url + link
     end
+
+    # Strip away javascript params
+    link = link.split('#')[0]
 
     return link
   end
@@ -134,7 +137,23 @@ class Crawler
   end
 
   def is_invalid(link)
+    # TODO: Something more robust...
+    if link == 'javascript:;'
+      return true
+    end
     !(link =~ URI::regexp)
+  end
+
+  def request_page(url)
+    begin
+      @page_counter += 1
+      if @page_counter % 25 == 0
+        print '.'
+      end
+      open(url, read_timeout: 4)
+    rescue
+      return false
+    end
   end
 
 end

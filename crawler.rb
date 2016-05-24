@@ -11,7 +11,7 @@ command :fetch do |c|
   c.syntax = 'crawler fetch --depth [depth] --url [url] --file [file]'
   c.summary = 'Crawl a site and output the site directory to a file.'
   c.example 'Only a url is required.', 'crawler fetch --url "http://r.gfax.ch" --depth 4 --output "output.json"'
-  c.option '--depth NUMBER', 'How many levels deep to crawl. Default: 8'
+  c.option '--depth NUMBER', 'How many levels deep to crawl. Default: 6'
   c.option '--url STRING', String, 'Site you wish to crawl.'
   c.option '--output STRING', String, 'File to output the results to. Default: output.json'
   c.action do |args, options|
@@ -26,7 +26,7 @@ command :fetch do |c|
       next
     end
 
-    options.default :depth => 8
+    options.default :depth => 6
     options.default :output => 'output.json'
 
     crawler = Crawler.new(options.url, options.depth.to_i)
