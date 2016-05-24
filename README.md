@@ -9,7 +9,7 @@ Although coverage is not thorough, my favorite part was writing some specs and s
 ./crawler.rb fetch --depth 8 --url "http://example.com" --output "output.json"
 
 ### --depth
-Specify the deepest level to crawl from the seed url. Default: 8
+Specify the deepest level to crawl from the seed url. Default: 6
 
 ### --output
 File to output the results to. Defaut: output.json
